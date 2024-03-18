@@ -15,7 +15,7 @@ def return_on_assets(income_stmt: pd.DataFrame, balance_sheet: pd.DataFrame) -> 
     # shorten income statement by one year
     # we have no balance sheet data of the previous year
     income_stmt_current = income_stmt.iloc[:-1, :]
-    assets = balance_sheet_avg["totalAssets"]
+    assets = balance_sheet_avg["totalNonCurrentAssets"]
     ebit = income_stmt_current["operatingIncome"]
 
     weights = weighting.linear_weights(len(assets), assets.index)

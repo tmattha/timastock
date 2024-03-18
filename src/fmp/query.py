@@ -17,6 +17,10 @@ def get_stock_symbols() -> pd.DataFrame:
     url = f"https://financialmodelingprep.com/api/v3/stock/list?apikey={api_key()}"
     return pd.read_json(url)
 
+def get_tradable_symbols() -> pd.DataFrame:
+    url = f"https://financialmodelingprep.com/api/v3/available-traded/list?apikey={api_key()}"
+    return pd.read_json(url).set_index("symbol")
+
 def get_screener_symbols(query: dict) -> pd.DataFrame:
     request = ""
     for (property, value) in query.items():
