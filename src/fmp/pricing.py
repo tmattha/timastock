@@ -10,3 +10,9 @@ def historical_prices(symbol, start: str = None, end: str = None):
         df = df.set_index('date')
         df.index = pd.to_datetime(df.index)
         return df
+
+def market_cap(symbol, start: str = None, end: str = None):
+    url = f"https://financialmodelingprep.com/api/v3/historical-market-capitalization/{symbol}?from={start}&to={end}&apikey={api_key()}"
+    df = pd.read_json(url).set_index("date")
+    df.index = pd.to_datetime(df.index)
+    return df

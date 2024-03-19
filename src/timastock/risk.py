@@ -16,3 +16,7 @@ def rolling_volatility(prices: pd.DataFrame, interval: int = 30):
 def ebit_volatility(income_statement: pd.DataFrame):
     ebit_percentages = income_statement['operatingIncome'].pct_change()
     return ebit_percentages.std()
+
+def debt_to_equity(balance_sheet: pd.DataFrame):
+    mry = balance_sheet.index.max()
+    return balance_sheet.loc[mry, "totalDebt"] / balance_sheet.loc[mry, "totalEquity"]
