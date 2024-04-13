@@ -3,6 +3,10 @@ import pandas as pd
 from urllib.request import urlopen 
 from .global_vars import api_key
 
+def full_historical_prices(symbol: str):
+    now = pd.Timestamp.today().strftime("%Y-%m-%d")
+    return historical_prices(symbol, end=now)
+
 def historical_prices(symbol, start: str = None, end: str = None):
     url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{symbol}?from={start}&to={end}&apikey={api_key()}"
     with urlopen(url) as response:

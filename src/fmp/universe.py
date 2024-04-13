@@ -6,7 +6,7 @@ import pandas as pd
 import tqdm
 from . import financials, pricing, company, global_vars
 
-def _get_universe_entry(symbol: str, start: str=None, end: str=None) -> dict:
+def _get_universe_entry(symbol: str) -> dict:
     symbol_info = {}
     retry = True
     while retry:
@@ -20,9 +20,9 @@ def _get_universe_entry(symbol: str, start: str=None, end: str=None) -> dict:
             if "metrics"            not in symbol_info:
                 symbol_info["metrics"] = financials.key_metrics(symbol)
             if "prices"             not in symbol_info:
-                symbol_info["prices"] = pricing.historical_prices(symbol, start=start, end=end)
+                symbol_info["prices"] = pricing.full_historical_prices(symbol)
             if "marketCap"          not in symbol_info:
-                symbol_info["marketCap"] = pricing.market_cap(symbol, start=start, end=end)
+                symbol_info["marketCap"] = pricing.market_cap(symbol)
             if "profile"            not in symbol_info:
                 symbol_info["profile"] = company.company_profile(symbol)
             if "executives"         not in symbol_info:
@@ -35,10 +35,10 @@ def _get_universe_entry(symbol: str, start: str=None, end: str=None) -> dict:
             print(f"Error on symbol {symbol}: {err}")
             return None
 
-def get_universe(symbols: list, start: str=None, end: str=None) -> list[dict]:
+def get_universe(symbols: list) -> list[dict]:
     universe = {}
     with futures.ThreadPoolExecutor(8) as executor:
-        runner = executor.map(lambda s: _get_universe_entry(s, start, end), symbols)
+        runner = executor.map(lambda s: _get_universe_entry(s), symbols)
         for stat in tqdm.tqdm(runner, "Constructing Universe", len(symbols)):
             if stat is not None: universe.update(stat)
     print(f"Successfully exported {len(universe)} of {len(symbols)} data sets.")
