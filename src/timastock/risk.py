@@ -1,6 +1,14 @@
 import numpy as np
 import pandas as pd
 
+def moving_average(prices: pd.DataFrame, window: int = 30) -> pd.Series:
+    return prices["adjClose"].rolling(window=window).mean()
+
+def max_drawdown(prices: pd.DataFrame) -> float:
+    mov_avg = moving_average(prices)
+    drawdowns = (prices["adjClose"] - mov_avg) / mov_avg
+    return drawdowns.dropna().min()
+
 def volatility(prices: pd.DataFrame):
     price_percentages = prices['adjClose'].pct_change()
     timediff: pd.Timedelta = prices.index.max() - prices.index.min()

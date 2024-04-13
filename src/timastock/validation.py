@@ -34,3 +34,12 @@ def indicator_band_ttest(data: pd.DataFrame, indicator: str, target: str, altern
             kde=tuple, element="step", bins=30)
     result = sps.ttest_ind(outside, inside, equal_var=False, alternative=alternative)
     return IndicatorBandTtestResult(result, lower_boundary, upper_boundary, outside_mean, inside_mean)
+
+def quantile_elimination(data: pd.DataFrame, column: str, quantile: float):
+    upper_boundary = data[column].quantile(1 - quantile)
+    lower_boundary = data[column].quantile(quantile)
+    return data[(data[column] < upper_boundary) & (data[column] > lower_boundary)]
+
+def indicator_overlap(data: pd.DataFrame, indicator1: str, indicator2: str):
+    both_high = data.loc[(data[indicator1] > data[indicator1].median()) & (data[indicator2] > data[indicator2].median())]
+    return (2 * len(both_high)) / len(data)
