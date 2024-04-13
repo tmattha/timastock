@@ -4,6 +4,8 @@ from . import valuation
 
 def annual_return(prices: pd.DataFrame) -> float:
     hist = prices['adjClose']
+    if len(hist) < 2:
+        return np.nan
     ratio = hist.iloc[0] / hist.iloc[-1]
     timediff: pd.Timedelta = hist.index[0] - hist.index[-1]
     return (ratio ** (365 / timediff.days)) - 1

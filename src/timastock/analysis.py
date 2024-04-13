@@ -16,6 +16,8 @@ def return_on_capital_employed(income_stmt: pd.DataFrame, balance_sheet: pd.Data
     # we have no balance sheet data of the previous year
     income_stmt_current = income_stmt.iloc[:-1, :]
     assets = balance_sheet_avg["totalAssets"] - balance_sheet_avg["totalCurrentLiabilities"]
+    if assets.sum == 0:
+        return np.nan
     ebit = income_stmt_current["operatingIncome"]
     result = (ebit.sum() / assets.sum())
     return result
