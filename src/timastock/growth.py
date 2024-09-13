@@ -22,3 +22,6 @@ def annual_capital_employed_growth(balance_sheet: pd.DataFrame) -> float:
     change = capital_employed.loc[latest_statement] / capital_employed.loc[oldest_statement]
     change_annual = change ** (1 / (latest_statement - oldest_statement))
     return change_annual - 1
+
+def investment_ratio(income_statement: pd.DataFrame, cashflow_statement: pd.DataFrame) -> float:
+    return -cashflow_statement["netCashUsedForInvestingActivites"].sum() / income_statement["revenue"].sum()
