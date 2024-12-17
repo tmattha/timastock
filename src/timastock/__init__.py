@@ -1,6 +1,7 @@
 from . import analysis
 from . import executives
 from . import growth
+from . import portfolio
 from . import pricing
 from . import returns
 from . import risk
