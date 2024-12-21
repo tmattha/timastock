@@ -10,7 +10,7 @@ def pb_ratio(market_cap: pd.DataFrame, balance_sheet: pd.DataFrame) -> float:
     return latest_cap / equity
 
 def annual_pb_ratio_growth(market_cap: pd.DataFrame, balance_sheet: pd.DataFrame) -> float:
-    if len(market_cap) == 0 or len(balance_sheet == 0):
+    if len(market_cap) == 0 or len(balance_sheet) == 0:
         return np.nan
     oldest_market_cap = market_cap.loc[[market_cap.index.min()]]
     latest_pb_ratio = pb_ratio(market_cap, balance_sheet)
