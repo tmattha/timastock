@@ -1,50 +1,16 @@
 import urllib.request
-import time
-import inspect
 
 import polars as pl
 from fmp.global_vars import api_key
+from fmp.common import ignore_rate_limit, multithread_concat
 
-import queue
-import tqdm
-import typing as t
-from concurrent import futures
-from urllib.error import HTTPError
-from functools import partial, wraps
+from functools import partial
 
-def _multithread_concat(worker_funcs: t.Iterable[t.Callable[[], pl.DataFrame]]) -> pl.DataFrame:
-    caller_name = inspect.currentframe().f_back.f_code.co_name
-    frame = None
-    with futures.ThreadPoolExecutor(8) as executor:
-        workers = [executor.submit(worker_func) for worker_func in worker_funcs]
-        for worker in tqdm.tqdm(futures.as_completed(workers), caller_name, len(worker_funcs)):
-            result = worker.result()
-            
-            if frame is None:
-                frame = result
-            else:
-                frame = pl.concat([frame, result])
-
-    return frame
-
-def ignore_rate_limit(func: t.Callable) -> t.Callable:
-    @wraps(func)
-    def __func_ignoring_rate_limit(*args, **kwargs) -> pl.DataFrame:
-        while True:
-            try:
-                result = func(*args, **kwargs)
-                return result
-            except HTTPError as err:
-                if err.code == 429:
-                    time.sleep(10)
-                else:
-                    raise err
-            except Exception as err:
-                raise err
-    return __func_ignoring_rate_limit
 
 @ignore_rate_limit
-def income_statement(symbol: str, period: str = 'annual', limit: int = 30) -> pl.DataFrame:
+def income_statement(
+    symbol: str, period: str = "annual", limit: int = 30
+) -> pl.DataFrame:
     url = f"https://financialmodelingprep.com/api/v3/income-statement/{symbol}?period={period}&limit={limit}&apikey={api_key()}"
     with urllib.request.urlopen(url) as response:
         df = pl.read_json(response)
@@ -84,16 +50,20 @@ def income_statement(symbol: str, period: str = 'annual', limit: int = 30) -> pl
         pl.col("eps").cast(pl.Float64),
         pl.col("epsdiluted").cast(pl.Float64),
         pl.col("weightedAverageShsOut").cast(pl.Float64),
-        pl.col("weightedAverageShsOutDil").cast(pl.Float64)
-        )
+        pl.col("weightedAverageShsOutDil").cast(pl.Float64),
+    )
 
-def multi_income_statements(symbols: list[str], period: str = 'annual', limit: int = 30) -> pl.DataFrame:
-    return _multithread_concat([
-        partial(income_statement, symbol, period, limit)
-        for symbol in symbols])
+
+def multi_income_statements(
+    symbols: list[str], period: str = "annual", limit: int = 30
+) -> pl.DataFrame:
+    return multithread_concat(
+        [partial(income_statement, symbol, period, limit) for symbol in symbols]
+    )
+
 
 @ignore_rate_limit
-def balance_sheet(symbol: str, period: str = 'annual', limit: int = 30) -> pl.DataFrame:
+def balance_sheet(symbol: str, period: str = "annual", limit: int = 30) -> pl.DataFrame:
     url = f"https://financialmodelingprep.com/api/v3/balance-sheet-statement/{symbol}?period={period}&limit={limit}&apikey={api_key()}"
     with urllib.request.urlopen(url) as response:
         df = pl.read_json(response)
@@ -149,16 +119,22 @@ def balance_sheet(symbol: str, period: str = 'annual', limit: int = 30) -> pl.Da
         pl.col("totalLiabilitiesAndTotalEquity").cast(pl.Float64),
         pl.col("totalInvestments").cast(pl.Float64),
         pl.col("totalDebt").cast(pl.Float64),
-        pl.col("netDebt").cast(pl.Float64)
-        )
+        pl.col("netDebt").cast(pl.Float64),
+    )
 
-def multi_balance_sheets(symbols: list[str], period: str = 'annual', limit: int = 30) -> pl.DataFrame:
-    return _multithread_concat([
-        partial(balance_sheet, symbol, period, limit)
-        for symbol in symbols])
+
+def multi_balance_sheets(
+    symbols: list[str], period: str = "annual", limit: int = 30
+) -> pl.DataFrame:
+    return multithread_concat(
+        [partial(balance_sheet, symbol, period, limit) for symbol in symbols]
+    )
+
 
 @ignore_rate_limit
-def cashflow_statement(symbol: str, period: str = 'annual', limit: int = 30) -> pl.DataFrame:
+def cashflow_statement(
+    symbol: str, period: str = "annual", limit: int = 30
+) -> pl.DataFrame:
     url = f"https://financialmodelingprep.com/api/v3/cash-flow-statement/{symbol}?period={period}&limit={limit}&apikey={api_key()}"
     with urllib.request.urlopen(url) as response:
         df = pl.read_json(response)
@@ -201,15 +177,19 @@ def cashflow_statement(symbol: str, period: str = 'annual', limit: int = 30) -> 
         pl.col("operatingCashFlow").cast(pl.Float64),
         pl.col("capitalExpenditure").cast(pl.Float64),
         pl.col("freeCashFlow").cast(pl.Float64),
-        )
+    )
 
-def multi_cashflow_statement(symbols: list[str], period: str = 'annual', limit: int = 30) -> pl.DataFrame:
-    return _multithread_concat([
-        partial(cashflow_statement, symbol, period, limit)
-        for symbol in symbols])
+
+def multi_cashflow_statement(
+    symbols: list[str], period: str = "annual", limit: int = 30
+) -> pl.DataFrame:
+    return multithread_concat(
+        [partial(cashflow_statement, symbol, period, limit) for symbol in symbols]
+    )
+
 
 @ignore_rate_limit
-def key_metrics(symbol: str, period: str = 'annual', limit: int = 30) -> pl.DataFrame:
+def key_metrics(symbol: str, period: str = "annual", limit: int = 30) -> pl.DataFrame:
     url = f"https://financialmodelingprep.com/api/v3/key-metrics/{symbol}?period={period}&limit={limit}&apikey={api_key()}"
     with urllib.request.urlopen(url) as response:
         df = pl.read_json(response)
@@ -275,10 +255,13 @@ def key_metrics(symbol: str, period: str = 'annual', limit: int = 30) -> pl.Data
         pl.col("payablesTurnover").cast(pl.Float64),
         pl.col("inventoryTurnover").cast(pl.Float64),
         pl.col("roe").cast(pl.Float64),
-        pl.col("capexPerShare").cast(pl.Float64)
-        )
+        pl.col("capexPerShare").cast(pl.Float64),
+    )
 
-def multi_key_metrics(symbols: list[str], period: str = 'annual', limit: int = 30) -> pl.DataFrame:
-    return _multithread_concat([
-        partial(key_metrics, symbol, period, limit)
-        for symbol in symbols])
+
+def multi_key_metrics(
+    symbols: list[str], period: str = "annual", limit: int = 30
+) -> pl.DataFrame:
+    return multithread_concat(
+        [partial(key_metrics, symbol, period, limit) for symbol in symbols]
+    )
