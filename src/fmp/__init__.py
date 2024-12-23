@@ -4,3 +4,4 @@ from . import pricing
 from . import query
 from . import universe
 from . import global_vars
+from . import parquet
