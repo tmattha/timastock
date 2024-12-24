@@ -1,4 +1,5 @@
 from . import analysis
+from . import capital
 from . import executives
 from . import growth
 from . import portfolio
