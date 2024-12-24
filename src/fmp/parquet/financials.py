@@ -1,10 +1,9 @@
 import urllib.request
+import json
 
 import polars as pl
 from fmp.global_vars import api_key
-from fmp.common import ignore_rate_limit, multithread_concat
-
-from functools import partial
+from fmp.common import ignore_rate_limit, convert_exceptions_to_none, multi_dataframe
 
 
 @ignore_rate_limit
@@ -53,13 +52,7 @@ def income_statement(
         pl.col("weightedAverageShsOutDil").cast(pl.Float64),
     )
 
-
-def multi_income_statements(
-    symbols: list[str], period: str = "annual", limit: int = 30
-) -> pl.DataFrame:
-    return multithread_concat(
-        [partial(income_statement, symbol, period, limit) for symbol in symbols]
-    )
+multi_income_statements = multi_dataframe(convert_exceptions_to_none(income_statement))
 
 
 @ignore_rate_limit
@@ -122,13 +115,7 @@ def balance_sheet(symbol: str, period: str = "annual", limit: int = 30) -> pl.Da
         pl.col("netDebt").cast(pl.Float64),
     )
 
-
-def multi_balance_sheets(
-    symbols: list[str], period: str = "annual", limit: int = 30
-) -> pl.DataFrame:
-    return multithread_concat(
-        [partial(balance_sheet, symbol, period, limit) for symbol in symbols]
-    )
+multi_balance_sheets = multi_dataframe(convert_exceptions_to_none(balance_sheet))
 
 
 @ignore_rate_limit
@@ -179,20 +166,18 @@ def cashflow_statement(
         pl.col("freeCashFlow").cast(pl.Float64),
     )
 
-
-def multi_cashflow_statement(
-    symbols: list[str], period: str = "annual", limit: int = 30
-) -> pl.DataFrame:
-    return multithread_concat(
-        [partial(cashflow_statement, symbol, period, limit) for symbol in symbols]
-    )
+multi_cashflow_statements = multi_dataframe(convert_exceptions_to_none(cashflow_statement))
 
 
 @ignore_rate_limit
 def key_metrics(symbol: str, period: str = "annual", limit: int = 30) -> pl.DataFrame:
     url = f"https://financialmodelingprep.com/api/v3/key-metrics/{symbol}?period={period}&limit={limit}&apikey={api_key()}"
     with urllib.request.urlopen(url) as response:
-        df = pl.read_json(response)
+        raw = json.load(response)
+        for entry in raw:
+            # inventory turnover is ill-defined if inventory is 0
+            del entry["inventoryTurnover"]
+        df = pl.DataFrame(raw)
     return df.select(
         pl.col("symbol"),
         pl.col("date").str.to_date(),
@@ -253,15 +238,8 @@ def key_metrics(symbol: str, period: str = "annual", limit: int = 30) -> pl.Data
         pl.col("daysOfInventoryOnHand").cast(pl.Float64),
         pl.col("receivablesTurnover").cast(pl.Float64),
         pl.col("payablesTurnover").cast(pl.Float64),
-        pl.col("inventoryTurnover").cast(pl.Float64),
         pl.col("roe").cast(pl.Float64),
         pl.col("capexPerShare").cast(pl.Float64),
     )
 
-
-def multi_key_metrics(
-    symbols: list[str], period: str = "annual", limit: int = 30
-) -> pl.DataFrame:
-    return multithread_concat(
-        [partial(key_metrics, symbol, period, limit) for symbol in symbols]
-    )
+multi_key_metrics = multi_dataframe(convert_exceptions_to_none(key_metrics))
