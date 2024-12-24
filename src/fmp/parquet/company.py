@@ -45,14 +45,3 @@ def company_profile(symbol: str) -> pl.DataFrame | None:
     )
 
 multi_company_profiles = multi_dataframe(convert_exceptions_to_none(company_profile))
-
-# @ignore_rate_limit
-# def executives(symbol: str) -> pl.DataFrame:
-#     url = f"https://financialmodelingprep.com/api/v3/key-executives/{symbol}?apikey={api_key()}"
-#     return pd.read_json(url)
-
-
-# @ignore_rate_limit
-# def shares_float(symbol: str) -> pl.DataFrame:
-#     url = f"https://financialmodelingprep.com/api/v4/historical/shares_float?symbol={symbol}&apikey={api_key()}"
-#     return pd.read_json(url).set_index("date")
