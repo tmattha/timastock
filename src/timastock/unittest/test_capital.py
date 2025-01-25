@@ -25,3 +25,23 @@ class CapitalTest(unittest.TestCase):
         result = tm.capital.capital_employed(balance_sheet.sort("calendarYear", descending=True))
         print(result)
         polt.assert_frame_equal(result, expected)
+
+    def test_return_on_capital_employed(self):
+        years = pl.Series("calendarYear", [2016, 2017, 2018], dtype=pl.Int32)
+        balance_sheet = pl.DataFrame({
+            "symbol": ["BLUB", "BLUB", "BLUB"],
+            "calendarYear": years,
+            "totalAssets": [10.0, 20.0, 20.0],
+            "totalCurrentLiabilities": [0.0, 0.0, 0.0]})
+        income_statement = pl.DataFrame({
+            "symbol": ["BLUB", "BLUB", "BLUB"],
+            "calendarYear": years,
+            "netIncome": [1.0, 3.0, 0.0]})
+        expected = pl.DataFrame({
+            "symbol": ["BLUB", "BLUB", "BLUB"],
+            "calendarYear": years,
+            "returnOnCapitalEmployed": [0.1, 0.2, 0.0]})
+        result = tm.capital.return_on_capital_employed(income_statement, balance_sheet)
+        print(result)
+        
+        polt.assert_frame_equal(result, expected)

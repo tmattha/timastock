@@ -1,4 +1,7 @@
 import pandas as pd
+import polars as pl
+
+AnyPolarsFrame = pl.DataFrame | pl.LazyFrame
 
 def series_common_index(series_a: pd.Series, series_b: pd.Series) -> tuple[pd.Series, pd.Series]:
     intersection = series_a.index.intersection(series_b.index)
