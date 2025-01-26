@@ -54,3 +54,24 @@ def access_universe(path: pathlib.Path) -> FmpUniverse:
     )
 
     return universe
+
+def split_universe(universe: FmpUniverse, date: pl.Date) -> tuple[FmpUniverse, FmpUniverse]:
+    past = FmpUniverse(
+        income_statements=universe.income_statements.filter(pl.col('date') <= date),
+        balance_sheets=universe.balance_sheets.filter(pl.col('date') <= date),
+        cashflow_statements=universe.cashflow_statements.filter(pl.col('date') <= date),
+        key_metrics=universe.key_metrics.filter(pl.col('date') <= date),
+        prices=universe.prices.filter(pl.col('date') <= date),
+        market_caps=universe.market_caps.filter(pl.col('date') <= date),
+        company_profiles=universe.company_profiles
+    )
+    future = FmpUniverse(
+        income_statements=universe.income_statements.filter(pl.col('date') > date),
+        balance_sheets=universe.balance_sheets.filter(pl.col('date') > date),
+        cashflow_statements=universe.cashflow_statements.filter(pl.col('date') > date),
+        key_metrics=universe.key_metrics.filter(pl.col('date') > date),
+        prices=universe.prices.filter(pl.col('date') > date),
+        market_caps=universe.market_caps.filter(pl.col('date') > date),
+        company_profiles=universe.company_profiles
+    )
+    return past, future 
