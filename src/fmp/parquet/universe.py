@@ -2,6 +2,7 @@ from . import financials, pricing, company
 import pathlib
 from dataclasses import dataclass
 import polars as pl
+import typing as t
 
 
 def store_universe(symbols: list, path: pathlib.Path) -> None:
@@ -74,4 +75,28 @@ def split_universe(universe: FmpUniverse, date: pl.Date) -> tuple[FmpUniverse, F
         market_caps=universe.market_caps.filter(pl.col('date') > date),
         company_profiles=universe.company_profiles
     )
-    return past, future 
+    return past, future
+
+def sort_universe(universe: FmpUniverse) -> FmpUniverse:
+    universe = FmpUniverse(
+        income_statements=universe.income_statements.sort("date"),
+        balance_sheets=universe.balance_sheets.sort("date"),
+        cashflow_statements=universe.cashflow_statements.sort("date"),
+        key_metrics=universe.key_metrics.sort("date"),
+        prices=universe.prices.sort("date"),
+        market_caps=universe.market_caps.sort("date"),
+        company_profiles=universe.company_profiles
+    )
+    return universe
+
+def concat_universes(universes: t.Iterable[FmpUniverse]) -> FmpUniverse:
+    universe = FmpUniverse(
+        income_statements=pl.concat([u.income_statements for u in universes]),
+        balance_sheets=pl.concat([u.balance_sheets for u in universes]),
+        cashflow_statements=pl.concat([u.cashflow_statements for u in universes]),
+        key_metrics=pl.concat([u.key_metrics for u in universes]),
+        prices=pl.concat([u.prices for u in universes]),
+        market_caps=pl.concat([u.market_caps for u in universes]),
+        company_profiles=pl.concat([u.company_profiles for u in universes])
+    )
+    return universe
