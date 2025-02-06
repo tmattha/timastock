@@ -17,12 +17,12 @@ class CapitalTest(unittest.TestCase):
             "calendarYear": years,
             # First interval does not have left value.
             "capitalEmployed": [14.5, 15.5, 19.5]})
-        result = tm.capital.capital_employed(balance_sheet)
+        result = tm.profitability.capital_employed(balance_sheet)
         print(result)
         
         polt.assert_frame_equal(result, expected)
         # Should not be subject to order.
-        result = tm.capital.capital_employed(balance_sheet.sort("calendarYear", descending=True))
+        result = tm.profitability.capital_employed(balance_sheet.sort("calendarYear", descending=True))
         print(result)
         polt.assert_frame_equal(result, expected)
 
@@ -41,7 +41,26 @@ class CapitalTest(unittest.TestCase):
             "symbol": ["BLUB", "BLUB", "BLUB"],
             "calendarYear": years,
             "returnOnCapitalEmployed": [0.1, 0.2, 0.0]})
-        result = tm.capital.return_on_capital_employed(income_statement, balance_sheet)
+        result = tm.profitability.return_on_capital_employed(income_statement, balance_sheet)
+        print(result)
+        
+        polt.assert_frame_equal(result, expected)
+
+    def test_gross_profitability(self):
+        years = pl.Series("calendarYear", [2016, 2017, 2018], dtype=pl.Int32)
+        balance_sheet = pl.DataFrame({
+            "symbol": ["BLUB", "BLUB", "BLUB"],
+            "calendarYear": years,
+            "totalAssets": [10.0, 20.0, 20.0]})
+        income_statement = pl.DataFrame({
+            "symbol": ["BLUB", "BLUB", "BLUB"],
+            "calendarYear": years,
+            "grossProfit": [1.0, 1.5, 1.0]})
+        expected = pl.DataFrame({
+            "symbol": ["BLUB", "BLUB", "BLUB"],
+            "calendarYear": years,
+            "grossProfitability": [0.1, 0.1, 0.05]})
+        result = tm.profitability.gross_profitability(income_statement, balance_sheet)
         print(result)
         
         polt.assert_frame_equal(result, expected)

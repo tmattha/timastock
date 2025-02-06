@@ -10,12 +10,12 @@ def annual_return(prices: AnyPolarsFrame) -> AnyPolarsFrame:
         pl.col('date').first().alias('firstDate'),
     )
     hist = hist.with_columns(
-        ((pl.col('lastClose') - pl.col('firstClose')) / pl.col('firstClose')).alias('totalReturn'),
+        (pl.col('lastClose') / pl.col('firstClose')).alias('totalReturn'),
         (pl.col('lastDate') - pl.col('firstDate')).dt.total_days().alias('totalDays'))
 
     result = hist.select(
         pl.col('symbol'),
-        ((pl.col('totalReturn').pow(-365 / pl.col('totalDays'))) - 1).alias('annualReturn')
+        ((pl.col('totalReturn').pow(365 / pl.col('totalDays'))) - 1).alias('annualReturn')
     )
 
     return result
