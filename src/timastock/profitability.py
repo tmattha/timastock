@@ -23,7 +23,7 @@ def return_on_capital_employed(income_stmt: AnyPolarsFrame, balance_sheet: AnyPo
     return joined.select(
         pl.col("symbol"),
         pl.col("calendarYear"),
-        (pl.col("netIncome") / pl.col("capitalEmployed")).alias("returnOnCapitalEmployed")
+        (pl.col("operatingIncome")/ pl.col("capitalEmployed")).alias("returnOnCapitalEmployed")
     )
 
 def gross_profitability(income_stmt: AnyPolarsFrame, balance_sheet: AnyPolarsFrame):
