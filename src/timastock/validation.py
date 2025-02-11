@@ -8,62 +8,65 @@ from .misc import AnyPolarsFrame
 
 import typing as t
 
-IndicatorBrunnerMunzelResult = namedtuple("IndicatorBrunnerMunzelResult", ["result", "median", "high_median", "low_median"])
-IndicatorLeveneResult = namedtuple("IndicatorLeveneResult", ["result", "variance", "high_variance", "low_variance"])
+IndicatorBrunnerMunzelResult = namedtuple("IndicatorBrunnerMunzelResult", ["results", "medians"])
+IndicatorLeveneResult = namedtuple("IndicatorLeveneResult", ["results", "variances"])
+EnumQuantiles = pl.Enum(["veryLow", "low", "medium", "high", "veryHigh"])
+
 
 def indicator_brunnermunzel(data: AnyPolarsFrame, indicator: str, target: str, split_on: t.Iterable[str] | str | None, alternative: str = "two-sided", with_plot: bool = True) -> IndicatorBrunnerMunzelResult:
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
-    median = data.select(pl.median(target)).item()
-    if split_on is None:
-        low_indicator = data.filter(pl.col(indicator) < pl.median(indicator))
-        high_indicator = data.filter(pl.col(indicator) > pl.median(indicator))
-    else:
-        low_indicator = data.filter(pl.col(indicator) < pl.median(indicator).over(split_on))
-        high_indicator = data.filter(pl.col(indicator) > pl.median(indicator).over(split_on))
-    low_median = low_indicator.select(pl.median(target)).item()
-    high_median = high_indicator.select(pl.median(target)).item()
-    bin_edges = data.select(pl.col(target).hist(bin_count=60, include_breakpoint=True).struct.field("breakpoint")).get_column("breakpoint")
+    binned = data.with_columns(pl.col(indicator).qcut(EnumQuantiles.categories.len(), allow_duplicates=True, labels=EnumQuantiles.categories.to_list()).over(split_on).alias("quantile"))
+
+    medians = dict({q: binned.filter(pl.col("quantile") == q).select(pl.median(target)).item() for q in EnumQuantiles.categories})
+    counts = dict({q: binned.filter(pl.col("quantile") == q).select(pl.len()).item() for q in EnumQuantiles.categories})
+
+    results = dict({
+        q: sps.brunnermunzel(
+            binned.filter(pl.col("quantile") == q).get_column(target),
+            binned.filter(pl.col("quantile") != q).get_column(target),
+            alternative=alternative)
+        for q in EnumQuantiles.categories})
     
     if with_plot:
-        low_histogramm = low_indicator.select(
-            bin_edges.rolling_mean(2).drop_nulls().alias(target),
-            pl.col(target).hist(bin_edges).alias("low"),
-        )
-        high_histogramm = high_indicator.select(
-            bin_edges.rolling_mean(2).drop_nulls().alias(target),
-            pl.col(target).hist(bin_edges).alias("high"),
-        )
-        overall_histogramm = low_histogramm.join(high_histogramm, on=target)
-        overall_histogramm = overall_histogramm.with_columns(
-            (pl.col("high").cast(pl.Int64) - pl.col("low").cast(pl.Int64)).alias("diff")
-        )
-        sns.lineplot(
-            overall_histogramm.unpivot(["low", "high", "diff"], variable_name=indicator, value_name="count", index=target),
-            x=target, y="count", hue=indicator, drawstyle="steps-mid")
-        plt.axhline(color="black",linewidth=0.5)
-    result = sps.brunnermunzel(low_indicator.get_column(target), high_indicator.get_column(target), alternative=alternative)
-    return IndicatorBrunnerMunzelResult(result, median, high_median, low_median)
+        plt.figure()
+        sns.kdeplot(binned, x=target, hue="quantile", fill=False)
+        plt.title(indicator)
+        plt.show()
+
+        for q in EnumQuantiles.categories:
+            print(f"Median if indicator in {q:8s} quantile: {medians[q]:.5g} {results[q].pvalue * 100:.3f} % over {counts[q]} samples.")
+
+    return IndicatorBrunnerMunzelResult(results, medians)
 
 def indicator_levene(data: AnyPolarsFrame, indicator: str, target: str, split_on: t.Iterable[str] | str | None,with_plot: bool = True) -> IndicatorLeveneResult:
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
-    variance = data.select(pl.var(indicator)).item()
-    if split_on is None:
-        low_indicator = data.filter(pl.col(indicator) < pl.median(indicator))
-        high_indicator = data.filter(pl.col(indicator) > pl.median(indicator))
-    else:
-        low_indicator = data.filter(pl.col(indicator) < pl.median(indicator).over(split_on))
-        high_indicator = data.filter(pl.col(indicator) > pl.median(indicator).over(split_on))
-    low_variance = low_indicator.select(pl.var(target)).item()
-    high_variance = high_indicator.select(pl.var(target)).item()
+    binned = data.with_columns(pl.col(indicator).qcut(EnumQuantiles.categories.len(), allow_duplicates=True, labels=EnumQuantiles.categories.to_list()).over(split_on).alias("quantile"))
 
-    binned = data.with_columns(pl.col(indicator).qcut(5, allow_duplicates=True, labels=["veryLow", "low", "medium", "high", "veryHigh"]).over(split_on))
-    binned = binned.select(indicator, pl.col(target).var().alias(f"{target}Variance").over(indicator))
+    
+    variances = binned.group_by("quantile").agg(pl.col(target).var().alias(f"{target}Variance"))
+    variances_tuple = dict({q: variances.filter(pl.col("quantile") == q).get_column(f"{target}Variance").item() for q in EnumQuantiles.categories})
+
+    counts = dict({q: binned.filter(pl.col("quantile") == q).select(pl.len()).item() for q in EnumQuantiles.categories})
+
+    results = dict({
+        q: sps.levene(
+            binned.filter(pl.col("quantile") == q).get_column(target),
+            binned.filter(pl.col("quantile") != q).get_column(target))
+        for q in EnumQuantiles.categories})
+    
     if with_plot:
-        sns.lineplot(binned, x=indicator, y=f"{target}Variance")
-    result = sps.levene(low_indicator.get_column(target), high_indicator.get_column(target))
-    return IndicatorLeveneResult(result, variance, high_variance, low_variance)
+        plt.figure()
+        sns.lineplot(variances, x="quantile", y=f"{target}Variance")
+        plt.title(f"Variances in {target} over quantiles of {indicator}")
+        plt.show()
+
+        for q in EnumQuantiles.categories:
+            print(f"Variance if indicator in {q:8s} quantile: {variances_tuple[q]:.5g} {results[q].pvalue * 100:.3f} % over {counts[q]} samples.")
+
+    
+    return IndicatorLeveneResult(results, variances_tuple)
 
 def quantile_elimination(data: AnyPolarsFrame, column: str, quantile: float):
     return data.filter(
