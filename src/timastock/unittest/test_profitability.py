@@ -36,7 +36,7 @@ class CapitalTest(unittest.TestCase):
         income_statement = pl.DataFrame({
             "symbol": ["BLUB", "BLUB", "BLUB"],
             "calendarYear": years,
-            "netIncome": [1.0, 3.0, 0.0]})
+            "operatingIncome": [1.0, 3.0, 0.0]})
         expected = pl.DataFrame({
             "symbol": ["BLUB", "BLUB", "BLUB"],
             "calendarYear": years,
