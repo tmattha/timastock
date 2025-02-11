@@ -9,7 +9,6 @@ class ReturnsTest(unittest.TestCase):
 
         dates = pl.Series("date", ["2023-01-01", "2024-01-01", "2022-01-01", "2024-01-01", "2023-01-01", "2023-03-15"])
         dates = dates.str.to_date()
-        print(dates)
         prices = pl.DataFrame({
             "symbol": ["BLUB", "BLUB", "APPL", "APPL", "MSFT", "MSFT"],
             "date": dates,

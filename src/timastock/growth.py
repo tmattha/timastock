@@ -1,4 +1,6 @@
 import pandas as pd
+import polars as pl
+from .misc import AnyPolarsFrame
 
 def annual_revenue_growth(income_statement: pd.DataFrame) -> float:
     revenue =  income_statement["revenue"]
@@ -14,6 +16,14 @@ def annual_revenue_growth(income_statement: pd.DataFrame) -> float:
     change = latest_revenue / oldest_revenue
     change_annual = change ** (1 / (latest_statement - oldest_statement))
     return change_annual - 1
+
+def yoy_growth(position: str, statement: AnyPolarsFrame) -> AnyPolarsFrame:
+    return statement.rolling("calendarYear", period="2i", group_by="symbol").agg(position) \
+        .filter(pl.col(position).list.len() == 2) \
+        .select(
+            "symbol", "calendarYear",
+            ((pl.col(position).list.last() / pl.col(position).list.first()) - 1).alias(f"{position}Growth")
+        )
 
 def annual_capital_employed_growth(balance_sheet: pd.DataFrame) -> float:
     latest_statement = balance_sheet.index.max()
