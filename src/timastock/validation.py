@@ -17,12 +17,14 @@ def indicator_brunnermunzel(data: AnyPolarsFrame, indicator: str, target: str, s
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
     data = data.select(
-        target,
-        pl.col(indicator).rank().over(split_on) / (pl.col(indicator).len().over(split_on) + 1))
-    binned = data.with_columns(pl.col(indicator).qcut(EnumQuantiles.categories.len(), allow_duplicates=True, labels=EnumQuantiles.categories.to_list()).alias("quantile"))
+        indicator, target,
+        (pl.col(indicator).rank() / (pl.col(indicator).len() + 1)).over(split_on).alias("relativeRank"))
+    binned = data.with_columns(pl.col("relativeRank").qcut(EnumQuantiles.categories.len(), allow_duplicates=True, labels=EnumQuantiles.categories.to_list()).alias("quantile"))
 
     medians = binned.group_by("quantile").agg(
+        pl.col(indicator).quantile(0.05).alias(f"{indicator}Low"),
         pl.col(indicator).median().alias(f"{indicator}Median"),
+        pl.col(indicator).quantile(0.95).alias(f"{indicator}High"),
         pl.col(target).median().alias(f"{target}Median"))
     medians_tuple = dict({q: medians.filter(pl.col("quantile") == q).get_column(f"{target}Median").item() for q in EnumQuantiles.categories})
     counts = dict({q: binned.filter(pl.col("quantile") == q).select(pl.len()).item() for q in EnumQuantiles.categories})
@@ -35,8 +37,11 @@ def indicator_brunnermunzel(data: AnyPolarsFrame, indicator: str, target: str, s
         for q in EnumQuantiles.categories})
     
     if with_plot:
+        preprocessed = medians.unpivot(
+            [f"{indicator}Low", f"{indicator}Median", f"{indicator}High"],
+            index=["quantile", f"{target}Median"], value_name=indicator)
         plt.figure()
-        sns.lineplot(medians, x=f"{indicator}Median", y=f"{target}Median", drawstyle='steps-mid')
+        sns.lineplot(preprocessed, x=indicator, y=f"{target}Median", hue="quantile", marker="d")
         plt.title(f"Median of {target} over quantiles of {indicator}")
         plt.show()
 
@@ -49,14 +54,16 @@ def indicator_levene(data: AnyPolarsFrame, indicator: str, target: str, split_on
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
     data = data.select(
-        target,
-        pl.col(indicator).rank().over(split_on) / (pl.col(indicator).len().over(split_on) + 1))
+        indicator, target,
+        (pl.col(indicator).rank() / (pl.col(indicator).len() + 1)).over(split_on).alias("relativeRank"))
 
-    binned = data.with_columns(pl.col(indicator).qcut(EnumQuantiles.categories.len(), allow_duplicates=True, labels=EnumQuantiles.categories.to_list()).alias("quantile"))
+    binned = data.with_columns(pl.col("relativeRank").qcut(EnumQuantiles.categories.len(), allow_duplicates=True, labels=EnumQuantiles.categories.to_list()).alias("quantile"))
 
     
     variances = binned.group_by("quantile").agg(
+        pl.col(indicator).quantile(0.05).alias(f"{indicator}Low"),
         pl.col(indicator).median().alias(f"{indicator}Median"),
+        pl.col(indicator).quantile(0.95).alias(f"{indicator}High"),
         pl.col(target).var().alias(f"{target}Variance"))
     variances_tuple = dict({q: variances.filter(pl.col("quantile") == q).get_column(f"{target}Variance").item() for q in EnumQuantiles.categories})
 
@@ -69,8 +76,11 @@ def indicator_levene(data: AnyPolarsFrame, indicator: str, target: str, split_on
         for q in EnumQuantiles.categories})
     
     if with_plot:
+        preprocessed = variances.unpivot(
+            [f"{indicator}Low", f"{indicator}Median", f"{indicator}High"],
+            index=["quantile", f"{target}Variance"], value_name=indicator)
         plt.figure()
-        sns.lineplot(variances, x=f"{indicator}Median", y=f"{target}Variance", drawstyle='steps-mid')
+        sns.lineplot(preprocessed, x=indicator, y=f"{target}Variance", hue="quantile", marker="d")
         plt.title(f"Variances in {target} over quantiles of {indicator}")
         plt.show()
 
