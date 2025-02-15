@@ -13,12 +13,18 @@ IndicatorLeveneResult = namedtuple("IndicatorLeveneResult", ["results", "varianc
 EnumQuantiles = pl.Enum(["veryLow", "low", "medium", "high", "veryHigh"])
 
 
-def indicator_brunnermunzel(data: AnyPolarsFrame, indicator: str, target: str, split_on: t.Iterable[str] | str | None, alternative: str = "two-sided", with_plot: bool = True) -> IndicatorBrunnerMunzelResult:
+def indicator_brunnermunzel(data: AnyPolarsFrame, indicator: str, target: str, split_on: t.Iterable[str] | str | None = None, alternative: str = "two-sided", with_plot: bool = True) -> IndicatorBrunnerMunzelResult:
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
-    binned = data.with_columns(pl.col(indicator).qcut(EnumQuantiles.categories.len(), allow_duplicates=True, labels=EnumQuantiles.categories.to_list()).over(split_on).alias("quantile"))
+    data = data.select(
+        target,
+        pl.col(indicator).rank().over(split_on) / (pl.col(indicator).len().over(split_on) + 1))
+    binned = data.with_columns(pl.col(indicator).qcut(EnumQuantiles.categories.len(), allow_duplicates=True, labels=EnumQuantiles.categories.to_list()).alias("quantile"))
 
-    medians = dict({q: binned.filter(pl.col("quantile") == q).select(pl.median(target)).item() for q in EnumQuantiles.categories})
+    medians = binned.group_by("quantile").agg(
+        pl.col(indicator).median().alias(f"{indicator}Median"),
+        pl.col(target).median().alias(f"{target}Median"))
+    medians_tuple = dict({q: medians.filter(pl.col("quantile") == q).get_column(f"{target}Median").item() for q in EnumQuantiles.categories})
     counts = dict({q: binned.filter(pl.col("quantile") == q).select(pl.len()).item() for q in EnumQuantiles.categories})
 
     results = dict({
@@ -30,22 +36,28 @@ def indicator_brunnermunzel(data: AnyPolarsFrame, indicator: str, target: str, s
     
     if with_plot:
         plt.figure()
-        sns.kdeplot(binned, x=target, hue="quantile", fill=False)
-        plt.title(indicator)
+        sns.lineplot(medians, x=f"{indicator}Median", y=f"{target}Median", drawstyle='steps-mid')
+        plt.title(f"Median of {target} over quantiles of {indicator}")
         plt.show()
 
         for q in EnumQuantiles.categories:
-            print(f"Median if indicator in {q:8s} quantile: {medians[q]:.5g} {results[q].pvalue * 100:.3f} % over {counts[q]} samples.")
+            print(f"Median if indicator in {q:8s} quantile: {medians_tuple[q]:.5g} {results[q].pvalue * 100:.3f} % over {counts[q]} samples.")
 
-    return IndicatorBrunnerMunzelResult(results, medians)
+    return IndicatorBrunnerMunzelResult(results, medians_tuple)
 
 def indicator_levene(data: AnyPolarsFrame, indicator: str, target: str, split_on: t.Iterable[str] | str | None,with_plot: bool = True) -> IndicatorLeveneResult:
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
-    binned = data.with_columns(pl.col(indicator).qcut(EnumQuantiles.categories.len(), allow_duplicates=True, labels=EnumQuantiles.categories.to_list()).over(split_on).alias("quantile"))
+    data = data.select(
+        target,
+        pl.col(indicator).rank().over(split_on) / (pl.col(indicator).len().over(split_on) + 1))
+
+    binned = data.with_columns(pl.col(indicator).qcut(EnumQuantiles.categories.len(), allow_duplicates=True, labels=EnumQuantiles.categories.to_list()).alias("quantile"))
 
     
-    variances = binned.group_by("quantile").agg(pl.col(target).var().alias(f"{target}Variance"))
+    variances = binned.group_by("quantile").agg(
+        pl.col(indicator).median().alias(f"{indicator}Median"),
+        pl.col(target).var().alias(f"{target}Variance"))
     variances_tuple = dict({q: variances.filter(pl.col("quantile") == q).get_column(f"{target}Variance").item() for q in EnumQuantiles.categories})
 
     counts = dict({q: binned.filter(pl.col("quantile") == q).select(pl.len()).item() for q in EnumQuantiles.categories})
@@ -58,7 +70,7 @@ def indicator_levene(data: AnyPolarsFrame, indicator: str, target: str, split_on
     
     if with_plot:
         plt.figure()
-        sns.lineplot(variances, x="quantile", y=f"{target}Variance")
+        sns.lineplot(variances, x=f"{indicator}Median", y=f"{target}Variance", drawstyle='steps-mid')
         plt.title(f"Variances in {target} over quantiles of {indicator}")
         plt.show()
 
