@@ -33,3 +33,8 @@ def gross_profitability(income_stmt: AnyPolarsFrame, balance_sheet: AnyPolarsFra
         pl.col("calendarYear"),
         (pl.col("grossProfit") / pl.col("totalAssets").rolling_mean(2, min_samples=1)).alias("grossProfitability")
     )
+
+def upkeep_ratio(income_stmt: AnyPolarsFrame):
+    return income_stmt.select(
+        "symbol", "calendarYear",
+        (pl.col("costAndExpenses") / pl.col("revenue")).alias("upkeepRatio"))

@@ -1,6 +1,7 @@
 from . import analysis
 from . import profitability
 from . import executives
+from . import forex
 from . import growth
 from . import portfolio
 from . import pricing

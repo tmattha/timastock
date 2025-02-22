@@ -10,8 +10,10 @@ import tqdm
 
 def multithread_concat(
     worker_funcs: t.Iterable[t.Callable[[], pl.DataFrame]],
+    caller_name: str | None = None
 ) -> pl.DataFrame:
-    caller_name = inspect.currentframe().f_back.f_code.co_name
+    if caller_name is None:
+        caller_name = str(inspect.currentframe().f_back.f_code.co_name)
     frame = None
     with futures.ThreadPoolExecutor(8) as executor:
         workers = [executor.submit(worker_func) for worker_func in worker_funcs]
@@ -71,7 +73,7 @@ def convert_exceptions_to_none(func: t.Callable[ParameterType, ReturnType]) -> t
 def multi_dataframe(func):
     @wraps(func)
     def __wrapped_function(symbols: list[str], *args, **kwargs):
-        return multithread_concat([partial(func, symbol, *args, **kwargs) for symbol in symbols])
+        return multithread_concat([partial(func, symbol, *args, **kwargs) for symbol in symbols], caller_name=func.__name__)
     return __wrapped_function
 
 def trace_log(str):

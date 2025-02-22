@@ -1,3 +1,5 @@
+import altair as alt
+import plotly.express as px
 import matplotlib.pyplot as plt
 import pandas as pd
 import polars as pl
@@ -40,17 +42,18 @@ def indicator_brunnermunzel(data: AnyPolarsFrame, indicator: str, target: str, s
         preprocessed = medians.unpivot(
             [f"{indicator}Low", f"{indicator}Median", f"{indicator}High"],
             index=["quantile", f"{target}Median"], value_name=indicator)
-        plt.figure()
-        sns.lineplot(preprocessed, x=indicator, y=f"{target}Median", hue="quantile", marker="d")
-        plt.title(f"Median of {target} over quantiles of {indicator}")
-        plt.show()
+        fig = px.line(preprocessed, x=indicator, y=f"{target}Median", color="quantile",
+            title=f"Median of {target} over quantiles of {indicator}", markers=True,
+            template="plotly_dark")
+        fig.update_traces(marker={"symbol": "diamond-tall", "size": 10, "line": {"color": fig.layout["plot_bgcolor"], "width": 1}})
+        fig.show()
 
         for q in EnumQuantiles.categories:
             print(f"Median if indicator in {q:8s} quantile: {medians_tuple[q]:.5g} {results[q].pvalue * 100:.3f} % over {counts[q]} samples.")
 
     return IndicatorBrunnerMunzelResult(results, medians_tuple)
 
-def indicator_levene(data: AnyPolarsFrame, indicator: str, target: str, split_on: t.Iterable[str] | str | None,with_plot: bool = True) -> IndicatorLeveneResult:
+def indicator_levene(data: AnyPolarsFrame, indicator: str, target: str, split_on: t.Iterable[str] | str | None, with_plot: bool = True) -> IndicatorLeveneResult:
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
     data = data.select(
@@ -79,10 +82,15 @@ def indicator_levene(data: AnyPolarsFrame, indicator: str, target: str, split_on
         preprocessed = variances.unpivot(
             [f"{indicator}Low", f"{indicator}Median", f"{indicator}High"],
             index=["quantile", f"{target}Variance"], value_name=indicator)
-        plt.figure()
-        sns.lineplot(preprocessed, x=indicator, y=f"{target}Variance", hue="quantile", marker="d")
-        plt.title(f"Variances in {target} over quantiles of {indicator}")
-        plt.show()
+        # plt.figure()
+        # sns.lineplot(preprocessed, x=indicator, y=f"{target}Variance", hue="quantile", marker="d")
+        # plt.title(f"Variances in {target} over quantiles of {indicator}")
+        # plt.show()
+        fig = px.line(preprocessed, x=indicator, y=f"{target}Variance", color="quantile",
+            title=f"Variance of {target} over quantiles of {indicator}", markers=True,
+            template="plotly_dark")
+        fig.update_traces(marker={"symbol": "diamond-tall", "size": 10, "line": {"color": fig.layout["plot_bgcolor"], "width": 1}})
+        fig.show()
 
         for q in EnumQuantiles.categories:
             print(f"Variance if indicator in {q:8s} quantile: {variances_tuple[q]:.5g} {results[q].pvalue * 100:.3f} % over {counts[q]} samples.")

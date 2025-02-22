@@ -3,7 +3,7 @@ import pathlib
 from dataclasses import dataclass
 import polars as pl
 import typing as t
-
+import timastock as tm
 
 def store_universe(symbols: list, path: pathlib.Path) -> None:
     if not path.exists():
@@ -99,4 +99,32 @@ def concat_universes(universes: t.Iterable[FmpUniverse]) -> FmpUniverse:
         market_caps=pl.concat([u.market_caps for u in universes]),
         company_profiles=pl.concat([u.company_profiles for u in universes])
     )
+    return universe
+
+def adjust_universe_by_rates(universe: FmpUniverse, rates: pl.DataFrame, ) -> FmpUniverse:
+    currencies = universe.company_profiles.select("symbol", "currency")
+    market_caps = universe.market_caps.join(currencies, on="symbol", how="left")
+
+    universe = FmpUniverse(
+        income_statements=tm.forex.adjust_by_rates(
+            universe.income_statements, rates, curr="reportedCurrency",
+            columns=universe.income_statements.columns[7:]),
+        balance_sheets=tm.forex.adjust_by_rates(
+            universe.balance_sheets, rates, curr="reportedCurrency",
+            columns=universe.balance_sheets.columns[7:-2]),
+        cashflow_statements=tm.forex.adjust_by_rates(
+            universe.cashflow_statements, rates, curr="reportedCurrency",
+            columns=universe.cashflow_statements.columns[7:]),
+        key_metrics=tm.forex.adjust_by_rates(
+            universe.key_metrics.join(currencies, on="symbol", how="left"), rates, curr="currency",
+            columns=["marketCap"]).select(pl.exclude("currency")),
+        prices=tm.forex.adjust_by_rates(
+            universe.prices.join(currencies, on="symbol", how="left"), rates, curr="currency",
+            columns=["open", "high", "low", "close", "adjClose", "vwap"]).select(pl.exclude("currency")),
+        market_caps=tm.forex.adjust_by_rates(
+            market_caps, rates, curr="currency",
+            columns=["marketCap"]).select(pl.exclude("currency")),
+        company_profiles=universe.company_profiles
+    )
+
     return universe
