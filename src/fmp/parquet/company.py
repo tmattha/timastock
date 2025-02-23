@@ -4,6 +4,7 @@ import polars as pl
 from fmp.global_vars import api_key
 from fmp.common import ignore_rate_limit, convert_exceptions_to_none, multi_dataframe
 
+COMPANY_PROFILE_VALIDATED_FIELDS = ["symbol", "companyName", "currency", "isin", "exchangeShortName", "industry", "sector", "country", "isEtf"]
 
 @ignore_rate_limit
 def company_profile(symbol: str) -> pl.DataFrame | None:

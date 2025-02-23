@@ -5,6 +5,8 @@ from fmp.global_vars import api_key
 from fmp.common import ignore_rate_limit, multi_dataframe, convert_exceptions_to_none
 from datetime import datetime
 
+HISORICAL_PRICES_CURRENCY_FIELDS = ["open", "high", "low", "close", "adjClose"]
+HISORICAL_PRICES_VALIDATED_FIELDS = ["symbol", "date", "volume"] + HISORICAL_PRICES_CURRENCY_FIELDS
 
 @ignore_rate_limit
 def historical_prices(symbol, start: str = None, end: str = datetime.today().strftime("%Y-%m-%d")) -> pl.DataFrame:

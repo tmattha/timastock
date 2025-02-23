@@ -5,6 +5,8 @@ import polars as pl
 from fmp.global_vars import api_key
 from fmp.common import ignore_rate_limit, convert_exceptions_to_none, multi_dataframe
 
+INCOME_STATEMENT_CURRENCY_FIELDS = ["revenue", "costOfRevenue", "grossProfit", "costAndExpenses", "operatingIncome", "ebitda", "netIncome"]
+INCOME_STATEMENT_VALIDATED_FIELDS = ["symbol", "date", "calendarYear", "reportedCurrency", "period", "link"] + INCOME_STATEMENT_CURRENCY_FIELDS
 
 @ignore_rate_limit
 def income_statement(
@@ -53,6 +55,22 @@ def income_statement(
     )
 
 multi_income_statements = multi_dataframe(convert_exceptions_to_none(income_statement))
+
+BALANCE_SHEET_CURRENCY_FIELDS = [
+    "cashAndCashEquivalents",
+    "inventory",
+    "totalCurrentAssets",
+    "goodwill",
+    "totalNonCurrentAssets",
+    "totalAssets",
+    "shortTermDebt",
+    "totalCurrentLiabilities", 
+    "totalLiabilities",
+    "retainedEarnings",
+    "totalEquity",
+    "totalInvestments",
+    "totalDebt"]
+BALANCE_SHEET_VALIDATED_FIELDS = ["symbol", "date", "calendarYear", "reportedCurrency", "period", "link"] + BALANCE_SHEET_CURRENCY_FIELDS
 
 
 @ignore_rate_limit
@@ -117,6 +135,19 @@ def balance_sheet(symbol: str, period: str = "annual", limit: int = 30) -> pl.Da
 
 multi_balance_sheets = multi_dataframe(convert_exceptions_to_none(balance_sheet))
 
+CASHFLOW_STATEMENT_CURRENCY_FIELDS = [
+    "netIncome",
+    "depreciationAndAmortization",
+    "inventory",
+    "investmentsInPropertyPlantAndEquipment",
+    "debtRepayment",
+    "dividendsPaid",
+    "operatingCashFlow",
+    "capitalExpenditure",
+    "freeCashFlow"
+]
+CASHFLOW_STATEMENT_VALIDATED_FIELDS = ["symbol", "date", "calendarYear", "reportedCurrency", "period", "link"] + CASHFLOW_STATEMENT_CURRENCY_FIELDS
+
 
 @ignore_rate_limit
 def cashflow_statement(
@@ -167,6 +198,26 @@ def cashflow_statement(
     )
 
 multi_cashflow_statements = multi_dataframe(convert_exceptions_to_none(cashflow_statement))
+
+KEY_METRICS_CURRENCY_FIELDS = [
+    "marketCap",
+    "enterpriseValue",
+]
+KEY_METRICS_VALIDATED_FIELDS = [
+    "symbol",
+    "date",
+    "calendarYear",
+    "period",
+    "peRatio",
+    "pbRatio",
+    "pfcfRatio",
+    "debtToEquity",
+    "debtToAssets",
+    "currentRatio",
+    "interestCoverage",
+    "payoutRatio",
+    "capexToRevenue",
+] + KEY_METRICS_CURRENCY_FIELDS
 
 
 @ignore_rate_limit
