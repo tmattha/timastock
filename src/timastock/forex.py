@@ -29,7 +29,10 @@ def adjust_by_rates(data: pl.DataFrame, rates: pl.DataFrame, curr: str, columns:
 def adjust_by_rates(data: pl.LazyFrame, rates: pl.DataFrame, curr: str, columns: t.Iterable[str]) -> pl.LazyFrame: ...
 
 def adjust_by_rates(data: AnyPolarsFrame, rates: pl.DataFrame, curr: str, columns: t.Iterable[str]) -> AnyPolarsFrame:
-    rates = rates.lazy()
+    if isinstance(data, pl.LazyFrame) and isinstance(rates, pl.DataFrame):
+        rates = rates.lazy()
+    if isinstance(data, pl.DataFrame) and isinstance(rates, pl.LazyFrame):
+        rates = rates.collect()
     data = data.sort("date")
     rates = rates.sort("date")
     data = data.with_columns(pl.col(curr).str.to_lowercase().alias("currLowercase"))
