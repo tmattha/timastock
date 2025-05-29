@@ -1,10 +1,9 @@
-import pandas as pd
 
-def linear_weights(n: int, index: pd.Series):
-    raw_weights = [float(x + 1) for x in range(n)]
-    raw_weights.reverse()
-    array = pd.Series(raw_weights)
-    # sum should be 1
-    array /= (n * (n + 1)) / 2
-    array.index = index
-    return array
+import polars as pl
+
+def weight_by_inverse_frequency(column: str | pl.Expr, weight: str | pl.Expr):
+    if not isinstance(column, pl.Expr):
+        column = pl.col(column)
+    if not isinstance(weight, pl.Expr):
+        weight = pl.col(weight)
+    return (column * pl.len() / pl.len().over(weight) / weight.n_unique())

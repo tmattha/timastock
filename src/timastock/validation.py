@@ -1,10 +1,6 @@
-import altair as alt
 import plotly.express as px
-import matplotlib.pyplot as plt
-import pandas as pd
 import polars as pl
 import scipy.stats as sps
-import seaborn as sns
 from collections import namedtuple
 from .misc import AnyPolarsFrame
 
